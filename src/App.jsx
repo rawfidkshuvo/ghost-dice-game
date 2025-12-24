@@ -16,6 +16,7 @@ import {
   onSnapshot,
   arrayUnion,
   increment,
+  runTransaction,
 } from "firebase/firestore";
 import {
   Dice1,
@@ -74,6 +75,57 @@ const DICE_ICONS = {
   6: Dice6,
 };
 
+const PLAYER_THEMES = [
+  {
+    name: "Red",
+    color: "text-red-400",
+    border: "border-red-500",
+    bg: "bg-red-900/20",
+    shadow: "shadow-red-500/20",
+    ring: "ring-red-500",
+  },
+  {
+    name: "Blue",
+    color: "text-blue-400",
+    border: "border-blue-500",
+    bg: "bg-blue-900/20",
+    shadow: "shadow-blue-500/20",
+    ring: "ring-blue-500",
+  },
+  {
+    name: "Green",
+    color: "text-green-400",
+    border: "border-green-500",
+    bg: "bg-green-900/20",
+    shadow: "shadow-green-500/20",
+    ring: "ring-green-500",
+  },
+  {
+    name: "Yellow",
+    color: "text-yellow-400",
+    border: "border-yellow-500",
+    bg: "bg-yellow-900/20",
+    shadow: "shadow-yellow-500/20",
+    ring: "ring-yellow-500",
+  },
+  {
+    name: "Purple",
+    color: "text-purple-400",
+    border: "border-purple-500",
+    bg: "bg-purple-900/20",
+    shadow: "shadow-purple-500/20",
+    ring: "ring-purple-500",
+  },
+  {
+    name: "Orange",
+    color: "text-orange-400",
+    border: "border-orange-500",
+    bg: "bg-orange-900/20",
+    shadow: "shadow-orange-500/20",
+    ring: "ring-orange-500",
+  },
+];
+
 // --- Sub-Components (Strict DNA adherence) ---
 
 const FloatingBackground = () => (
@@ -92,7 +144,7 @@ const FloatingBackground = () => (
 
 const GhostLogo = () => (
   <div className="flex items-center justify-center gap-1 opacity-40 mt-auto pb-2 pt-2 relative z-10">
-    <Ghost size={12} className="text-indigo-400" />
+    <Dices size={12} className="text-indigo-400" />
     <span className="text-[10px] font-black tracking-widest text-indigo-400 uppercase">
       GHOST DICE
     </span>
@@ -401,6 +453,8 @@ export default function GhostDiceGame() {
       turnState: "IDLE", // BIDDING, REVEAL
       feedbackTrigger: null,
       winner: null,
+      roundLoserId: null, // Track who lost the round
+      revealReadyIds: [], // Track who clicked "Next Round"
     };
 
     try {
@@ -588,7 +642,6 @@ export default function GhostDiceGame() {
     const bidder = gameState.players.find((p) => p.id === bid.playerId);
 
     // 1. Reveal Phase: Count Dice
-    // 1s are wild unless bid face is 1
     let count = 0;
     let allDice = [];
 
@@ -621,15 +674,19 @@ export default function GhostDiceGame() {
         }.`,
         type: bidSuccess ? "success" : "danger",
       },
-      { id: Date.now() + 2, text: `${loserName} loses a die!`, type: "danger" },
+      {
+        id: Date.now() + 2,
+        text: `${loserName} will lose a die!`,
+        type: "danger",
+      },
     ];
 
     // Update Feedback
     const feedback = {
       id: Date.now(),
-      type: bidSuccess ? "failure" : "success", // From challenger perspective: if bid success, challenger fails
+      type: bidSuccess ? "failure" : "success",
       message: bidSuccess ? "BID VALID" : "BID FAILED",
-      subtext: `${count} found vs ${bid.quantity} bid. ${loserName} loses die.`,
+      subtext: `${count} found vs ${bid.quantity} bid. Waiting for players to roll...`,
     };
 
     await updateDoc(
@@ -638,78 +695,119 @@ export default function GhostDiceGame() {
         turnState: "REVEAL",
         feedbackTrigger: feedback,
         logs: arrayUnion(...logs),
+        roundLoserId: loserId,
+        revealReadyIds: [], // Reset for voting
       }
     );
+  };
 
-    // 2. Resolve (Delay)
-    setTimeout(async () => {
-      const players = [...gameState.players];
-      const lIdx = players.findIndex((p) => p.id === loserId);
+  const confirmNextRound = async () => {
+    if (!gameState || !user) return;
 
-      players[lIdx].diceCount -= 1;
+    // Use transaction-like safety for voting logic
+    const roomRef = doc(
+      db,
+      "artifacts",
+      APP_ID,
+      "public",
+      "data",
+      "rooms",
+      roomId
+    );
 
-      let logText = "";
-      let nextState = "BIDDING";
-      let winner = null;
+    try {
+      await runTransaction(db, async (transaction) => {
+        const roomDoc = await transaction.get(roomRef);
+        if (!roomDoc.exists()) return;
+        const data = roomDoc.data();
 
-      if (players[lIdx].diceCount <= 0) {
-        players[lIdx].eliminated = true;
-        logText = `${players[lIdx].name} has run out of soul. Eliminated.`;
-      }
+        // Safety: Already voted?
+        if (data.revealReadyIds?.includes(user.uid)) return;
 
-      // Check Win Condition
-      const alive = players.filter((p) => !p.eliminated);
-      if (alive.length === 1) {
-        nextState = "FINISHED";
-        winner = alive[0].name;
-      }
+        // Add user to ready list
+        const newReadyIds = [...(data.revealReadyIds || []), user.uid];
+        const activePlayerCount = data.players.filter(
+          (p) => !p.eliminated
+        ).length;
 
-      // Reroll everyone who is alive
-      players.forEach((p) => {
-        if (!p.eliminated) p.dice = rollDice(p.diceCount);
-        else p.dice = [];
+        // Check if everyone is ready
+        if (newReadyIds.length >= activePlayerCount) {
+          // RESOLVE ROUND
+          const players = [...data.players];
+          const lIdx = players.findIndex((p) => p.id === data.roundLoserId);
+
+          players[lIdx].diceCount -= 1;
+
+          let logText = "";
+          let nextState = "BIDDING";
+          let winner = null;
+          let feedback = null;
+
+          if (players[lIdx].diceCount <= 0) {
+            players[lIdx].eliminated = true;
+            logText = `${players[lIdx].name} has run out of soul. Eliminated.`;
+          }
+
+          // Check Win Condition
+          const alive = players.filter((p) => !p.eliminated);
+          if (alive.length === 1) {
+            nextState = "FINISHED";
+            winner = alive[0].name;
+            feedback = {
+              id: Date.now(),
+              type: "success",
+              message: "VICTORY",
+              subtext: `${winner} Survives!`,
+            };
+          } else {
+            // Reroll everyone who is alive
+            players.forEach((p) => {
+              if (!p.eliminated) p.dice = rollDice(p.diceCount);
+              else p.dice = [];
+            });
+          }
+
+          // Next Player Calculation
+          let nextIdx = lIdx;
+          if (players[lIdx].eliminated) {
+            nextIdx = (lIdx + 1) % players.length;
+            while (players[nextIdx].eliminated && alive.length > 1)
+              nextIdx = (nextIdx + 1) % players.length;
+          }
+
+          const updates = {
+            players: players,
+            turnState: nextState === "FINISHED" ? "IDLE" : "BIDDING",
+            currentBid: null,
+            turnIndex: nextIdx,
+            revealReadyIds: [],
+            roundLoserId: null,
+          };
+
+          if (logText) {
+            updates.logs = arrayUnion({
+              id: Date.now().toString(),
+              text: logText,
+              type: "danger",
+            });
+          }
+          if (winner) {
+            updates.status = "finished";
+            updates.winner = winner;
+            updates.feedbackTrigger = feedback;
+          }
+
+          transaction.update(roomRef, updates);
+        } else {
+          // Just update vote count
+          transaction.update(roomRef, {
+            revealReadyIds: newReadyIds,
+          });
+        }
       });
-
-      // Winner of challenge (or survivor) goes next.
-      // If loser eliminated, next alive person goes.
-      let nextIdx = lIdx;
-      if (players[lIdx].eliminated) {
-        nextIdx = (lIdx + 1) % players.length;
-        while (players[nextIdx].eliminated && activePlayers > 1)
-          nextIdx = (nextIdx + 1) % players.length;
-      }
-
-      let updates = {
-        players: players,
-        turnState: nextState === "FINISHED" ? "IDLE" : "BIDDING",
-        currentBid: null,
-        turnIndex: nextIdx,
-      };
-
-      if (logText) {
-        updates.logs = arrayUnion({
-          id: Date.now().toString(),
-          text: logText,
-          type: "danger",
-        });
-      }
-
-      if (winner) {
-        updates.status = "finished";
-        updates.winner = winner;
-        updates.feedbackTrigger = {
-          id: Date.now(),
-          type: "success",
-          message: "VICTORY",
-          subtext: `${winner} Survives!`,
-        };
-      }
-
-      await updateDoc(
-        doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
-        updates
-      );
-    }, 4000); // 4 Second Reveal
+    } catch (e) {
+      console.error("Transaction failed: ", e);
+    }
   };
 
   const returnToLobby = async () => {
@@ -730,6 +828,8 @@ export default function GhostDiceGame() {
         turnState: "IDLE",
         winner: null,
         feedbackTrigger: null,
+        revealReadyIds: [],
+        roundLoserId: null,
       }
     );
   };
@@ -750,20 +850,6 @@ export default function GhostDiceGame() {
             The spirits are resting. The tavern is closed until dusk.
           </p>
         </div>
-        {/* Add Spacing Between Boxes */}
-        <div className="h-8"></div>
-
-        {/* Clickable Second Card */}
-        <a href="https://rawfidkshuvo.github.io/gamehub/">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <div className="text-center pb-12 animate-pulse">
-              <div className="inline-flex items-center gap-3 px-8 py-4 bg-slate-900/50 rounded-full border border-indigo-500/20 text-indigo-300 font-bold tracking-widest text-sm uppercase backdrop-blur-sm">
-                <Sparkles size={16} /> Visit Gamehub...Try our other releases...{" "}
-                <Sparkles size={16} />
-              </div>
-            </div>
-          </div>
-        </a>
       </div>
     );
   }
@@ -893,38 +979,39 @@ export default function GhostDiceGame() {
               <span>Souls ({gameState.players.length})</span>
             </h3>
             <div className="space-y-2">
-              {gameState.players.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between bg-zinc-800/50 p-3 rounded border border-zinc-700/50"
-                >
-                  <span
-                    className={`font-bold flex items-center gap-2 ${
-                      p.id === user.uid ? "text-indigo-400" : "text-zinc-300"
-                    }`}
+              {gameState.players.map((p, i) => {
+                const theme = PLAYER_THEMES[i % PLAYER_THEMES.length];
+                return (
+                  <div
+                    key={p.id}
+                    className={`flex items-center justify-between p-3 rounded border ${theme.bg} ${theme.border}`}
                   >
-                    <User size={14} /> {p.name}{" "}
-                    {p.id === gameState.hostId && (
-                      <Crown size={14} className="text-yellow-500" />
-                    )}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-500 text-xs flex items-center gap-1">
-                      <CheckCircle size={12} /> Present
+                    <span
+                      className={`font-bold flex items-center gap-2 ${theme.color}`}
+                    >
+                      <User size={14} /> {p.name}{" "}
+                      {p.id === gameState.hostId && (
+                        <Crown size={14} className="text-yellow-500" />
+                      )}
                     </span>
-                    {/* --- KICK BUTTON --- */}
-                    {isHost && p.id !== user.uid && (
-                      <button
-                        onClick={() => kickPlayer(p.id)}
-                        className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-900/20 rounded-full transition-colors"
-                        title="Kick Soul"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-500 text-xs flex items-center gap-1">
+                        <CheckCircle size={12} /> Present
+                      </span>
+                      {/* --- KICK BUTTON --- */}
+                      {isHost && p.id !== user.uid && (
+                        <button
+                          onClick={() => kickPlayer(p.id)}
+                          className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-900/20 rounded-full transition-colors"
+                          title="Kick Soul"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {gameState.players.length < 2 && (
                 <div className="text-center text-zinc-500 italic text-sm py-2">
                   Waiting for more souls...
@@ -959,6 +1046,9 @@ export default function GhostDiceGame() {
   }
 
   if (view === "game" && gameState) {
+    const myIndex = gameState.players.findIndex((p) => p.id === user.uid);
+    const myTheme = PLAYER_THEMES[myIndex % PLAYER_THEMES.length];
+
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex flex-col relative overflow-hidden font-sans">
         <FloatingBackground />
@@ -1058,6 +1148,8 @@ export default function GhostDiceGame() {
             {gameState.players.map((p, i) => {
               if (p.id === user.uid) return null;
               const isTurn = gameState.turnIndex === i;
+              const theme = PLAYER_THEMES[i % PLAYER_THEMES.length];
+
               return (
                 <div
                   key={p.id}
@@ -1065,17 +1157,28 @@ export default function GhostDiceGame() {
                                 relative bg-zinc-900/90 p-4 rounded-xl border-2 w-32 md:w-40 transition-all flex flex-col items-center
                                 ${
                                   isTurn
-                                    ? "border-indigo-500 shadow-lg shadow-indigo-900/20 scale-105"
+                                    ? `${theme.border} ${theme.shadow} scale-105`
                                     : "border-zinc-700"
                                 }
                                 ${p.eliminated ? "opacity-40 grayscale" : ""}
                             `}
                 >
+                  {/* Status Indicator for Next Round */}
+                  {gameState.turnState === "REVEAL" &&
+                    !p.eliminated &&
+                    gameState.revealReadyIds?.includes(p.id) && (
+                      <div className="absolute top-2 left-2">
+                        <CheckCircle size={16} className="text-green-500" />
+                      </div>
+                    )}
+
                   <div className="absolute top-2 right-2 flex gap-0.5">
                     {[...Array(p.diceCount)].map((_, idx) => (
                       <div
                         key={idx}
-                        className="w-1.5 h-1.5 rounded-full bg-indigo-400/50"
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isTurn ? "bg-white" : "bg-zinc-600"
+                        }`}
                       />
                     ))}
                   </div>
@@ -1085,17 +1188,17 @@ export default function GhostDiceGame() {
                   ) : (
                     <Ghost
                       size={32}
-                      className={
+                      className={`${
                         isTurn
-                          ? "text-indigo-400 animate-bounce"
+                          ? theme.color + " animate-bounce"
                           : "text-zinc-600"
-                      }
+                      }`}
                     />
                   )}
 
                   <span
                     className={`font-bold text-sm truncate w-full text-center ${
-                      isTurn ? "text-indigo-200" : "text-zinc-400"
+                      isTurn ? theme.color : "text-zinc-400"
                     }`}
                   >
                     {p.name}
@@ -1122,17 +1225,44 @@ export default function GhostDiceGame() {
 
           {/* Player Area */}
           <div
-            className={`w-full max-w-2xl bg-zinc-900/95 p-4 rounded-t-3xl border-t border-indigo-500/30 backdrop-blur-md mt-auto shadow-2xl z-20 ${
+            className={`w-full max-w-2xl bg-zinc-900/95 p-4 rounded-t-3xl border-t-4 ${
+              myTheme.border
+            } backdrop-blur-md mt-auto shadow-2xl z-20 transition-all ${
               me.eliminated && gameState.status !== "finished"
                 ? "grayscale opacity-50 pointer-events-none"
                 : ""
             }`}
           >
+            {/* Roll Button Overlay for Reveal Phase */}
+            {gameState.turnState === "REVEAL" && !me.eliminated && (
+              <div className="absolute -top-16 left-0 right-0 flex justify-center z-30">
+                {!gameState.revealReadyIds?.includes(user.uid) ? (
+                  <button
+                    onClick={confirmNextRound}
+                    className={`
+                      px-8 py-3 rounded-full font-black text-lg shadow-xl uppercase tracking-widest flex items-center gap-2 animate-bounce
+                      ${myTheme.bg} ${myTheme.text} ${myTheme.border} border-2
+                    `}
+                  >
+                    <Dices size={24} /> Roll Dice
+                  </button>
+                ) : (
+                  <div className="bg-zinc-900 px-6 py-2 rounded-full border border-green-500 text-green-500 font-bold flex items-center gap-2">
+                    <CheckCircle size={18} /> Ready
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
-                <User className="text-indigo-400" />
-                <span className="font-bold text-xl">{me.name}</span>
-                <div className="bg-indigo-900/30 px-3 py-1 rounded-full text-xs text-indigo-300 border border-indigo-500/30">
+                <User className={myTheme.color} />
+                <span className={`font-bold text-xl ${myTheme.color}`}>
+                  {me.name}
+                </span>
+                <div
+                  className={`px-3 py-1 rounded-full text-xs border ${myTheme.bg} ${myTheme.color} ${myTheme.border}`}
+                >
                   {me.diceCount} Dice Left
                 </div>
               </div>
@@ -1147,7 +1277,7 @@ export default function GhostDiceGame() {
                                        gameState.currentBid &&
                                        (d === gameState.currentBid.face ||
                                          d === 1)
-                                         ? "ring-2 ring-yellow-500"
+                                         ? `ring-2 ${myTheme.ring}`
                                          : ""
                                      }
                                  `}
@@ -1268,7 +1398,7 @@ export default function GhostDiceGame() {
                           onClick={() => setBidFace(face)}
                           className={`p-2 rounded-md transition-all ${
                             bidFace === face
-                              ? "bg-indigo-600 text-white shadow-lg"
+                              ? `bg-indigo-600 text-white shadow-lg`
                               : "hover:bg-zinc-700 text-zinc-500"
                           }`}
                         >
@@ -1286,7 +1416,7 @@ export default function GhostDiceGame() {
                           (bidQuantity === gameState.currentBid.quantity &&
                             bidFace <= gameState.currentBid.face))
                       }
-                      className="col-span-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:bg-zinc-800 text-white py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2"
+                      className={`col-span-2 ${myTheme.bg} border ${myTheme.border} ${myTheme.text} hover:opacity-80 disabled:opacity-50 disabled:bg-zinc-800 disabled:border-zinc-700 disabled:text-zinc-500 py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2`}
                     >
                       <Megaphone size={20} /> Place Bid
                     </button>
@@ -1302,7 +1432,7 @@ export default function GhostDiceGame() {
               ) : (
                 <div className="text-center text-zinc-500 animate-pulse py-8">
                   {gameState.turnState === "REVEAL"
-                    ? "Resolving Challenge..."
+                    ? "Waiting for all players to roll the dice..."
                     : `Waiting for ${
                         gameState.players[gameState.turnIndex]?.name
                       }...`}
