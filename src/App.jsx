@@ -41,7 +41,8 @@ import {
   Megaphone,
   Hammer,
   Sparkles,
-  Trash2, // Added Trash2 icon
+  Trash2,
+  Loader,
 } from "lucide-react";
 
 // --- Firebase Config ---
@@ -60,6 +61,7 @@ const db = getFirestore(app);
 
 const APP_ID = typeof __app_id !== "undefined" ? __app_id : "ghost-dice";
 const GAME_ID = "7";
+const LS_ROOM_KEY = "ghost_dice_roomId"; // Persistence Key
 
 // --- Constants ---
 const DICE_ICONS = {
@@ -283,7 +285,10 @@ export default function GhostDiceGame() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState("menu");
   const [playerName, setPlayerName] = useState("");
-  const [roomId, setRoomId] = useState("");
+  // PERSISTENCE: Init state from localStorage
+  const [roomId, setRoomId] = useState(
+    () => localStorage.getItem(LS_ROOM_KEY) || ""
+  );
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [gameState, setGameState] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -324,6 +329,7 @@ export default function GhostDiceGame() {
           const data = snap.data();
           if (!data.players.some((p) => p.id === user.uid)) {
             setRoomId("");
+            localStorage.removeItem(LS_ROOM_KEY); // Clean up
             setView("menu");
             setError("Connection Terminated.");
             return;
@@ -349,6 +355,7 @@ export default function GhostDiceGame() {
           }
         } else {
           setRoomId("");
+          localStorage.removeItem(LS_ROOM_KEY); // Clean up
           setView("menu");
           setError("Room vanished into the ether.");
         }
@@ -401,6 +408,7 @@ export default function GhostDiceGame() {
         initialData
       );
       setRoomId(newId);
+      localStorage.setItem(LS_ROOM_KEY, newId); // Save Session
       setView("lobby");
     } catch (e) {
       setError("Network error.");
@@ -441,6 +449,7 @@ export default function GhostDiceGame() {
         });
       }
       setRoomId(roomCodeInput);
+      localStorage.setItem(LS_ROOM_KEY, roomCodeInput); // Save Session
     } catch (e) {
       setError(e.message);
     }
@@ -465,6 +474,7 @@ export default function GhostDiceGame() {
     }
 
     setRoomId("");
+    localStorage.removeItem(LS_ROOM_KEY); // Clean up
     setView("menu");
     setShowLeaveConfirm(false);
   };
@@ -765,6 +775,22 @@ export default function GhostDiceGame() {
         Summoning...
       </div>
     );
+
+  // RECONNECTING STATE
+  if (roomId && !gameState && !error) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-white p-4">
+        <FloatingBackground />
+        <div className="bg-zinc-900/80 backdrop-blur p-8 rounded-2xl border border-zinc-700 shadow-2xl flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300">
+          <Loader size={48} className="text-indigo-500 animate-spin" />
+          <div className="text-center">
+            <h2 className="text-xl font-bold">Reconnecting...</h2>
+            <p className="text-zinc-400 text-sm">Resuming the Séance</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (view === "menu") {
     return (
@@ -1109,8 +1135,8 @@ export default function GhostDiceGame() {
                   {me.diceCount} Dice Left
                 </div>
               </div>
-              {/* My Dice */}
-              <div className="flex gap-2 bg-black/40 p-2 rounded-xl">
+              {/* My Dice - Updated for Mobile Overflow */}
+              <div className="flex flex-wrap justify-center gap-2 bg-black/40 p-2 rounded-xl">
                 {me.dice.map((d, i) => (
                   <div
                     key={i}
