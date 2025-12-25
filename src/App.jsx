@@ -77,28 +77,28 @@ const DICE_ICONS = {
 
 const PLAYER_THEMES = [
   {
-    name: "Red",
-    color: "text-red-400",
-    border: "border-red-500",
-    bg: "bg-red-900/20",
-    shadow: "shadow-red-500/20",
-    ring: "ring-red-500",
-  },
-  {
-    name: "Blue",
-    color: "text-blue-400",
-    border: "border-blue-500",
-    bg: "bg-blue-900/20",
-    shadow: "shadow-blue-500/20",
-    ring: "ring-blue-500",
-  },
-  {
     name: "Green",
     color: "text-green-400",
     border: "border-green-500",
     bg: "bg-green-900/20",
     shadow: "shadow-green-500/20",
     ring: "ring-green-500",
+  },
+  {
+    name: "Orange",
+    color: "text-orange-400",
+    border: "border-orange-500",
+    bg: "bg-orange-900/20",
+    shadow: "shadow-orange-500/20",
+    ring: "ring-orange-500",
+  },
+  {
+    name: "Cyan",
+    color: "text-cyan-400",
+    border: "border-cyan-500",
+    bg: "bg-cyan-900/20",
+    shadow: "shadow-cyan-500/20",
+    ring: "ring-cyan-500",
   },
   {
     name: "Yellow",
@@ -117,12 +117,12 @@ const PLAYER_THEMES = [
     ring: "ring-purple-500",
   },
   {
-    name: "Orange",
-    color: "text-orange-400",
-    border: "border-orange-500",
-    bg: "bg-orange-900/20",
-    shadow: "shadow-orange-500/20",
-    ring: "ring-orange-500",
+    name: "Rose",
+    color: "text-rose-400",
+    border: "border-rose-500",
+    bg: "bg-rose-900/20",
+    shadow: "shadow-rose-500/20",
+    ring: "ring-rose-500",
   },
 ];
 
@@ -1114,8 +1114,12 @@ export default function GhostDiceGame() {
         {/* Game Content */}
         <div className="flex-1 p-4 flex flex-col items-center relative z-10 max-w-6xl mx-auto w-full gap-4">
           {/* Table Center (Current Bid) */}
-          <div className="w-full max-w-md bg-zinc-900/50 p-6 rounded-2xl border border-indigo-500/20 flex flex-col items-center justify-center min-h-[160px] animate-in fade-in zoom-in">
-            <div className="text-xs text-indigo-400 uppercase tracking-widest mb-2">
+          <div
+            className={`w-full max-w-md ${myTheme.bg} p-6 rounded-2xl border border-indigo-500/20 flex flex-col items-center justify-center min-h-[160px] animate-in fade-in zoom-in`}
+          >
+            <div
+              className={`text-xs ${myTheme.color} uppercase tracking-widest mb-2`}
+            >
               Current Bid
             </div>
             {gameState.currentBid ? (
@@ -1127,8 +1131,7 @@ export default function GhostDiceGame() {
                   <span className="text-4xl text-zinc-500">x</span>
                   {React.createElement(DICE_ICONS[gameState.currentBid.face], {
                     size: 64,
-                    className:
-                      "text-indigo-400 drop-shadow-[0_0_10px_rgba(129,140,248,0.5)]",
+                    className: `${myTheme.color} drop-shadow-[0_0_10px_rgba(129,140,248,0.5)]`,
                   })}
                 </div>
                 <div className="mt-2 text-zinc-400 text-sm">
@@ -1272,7 +1275,7 @@ export default function GhostDiceGame() {
                   <div
                     key={i}
                     className={`
-                                     bg-zinc-100 rounded-lg p-1 shadow-inner
+                                    ${myTheme.bg} rounded-lg p-1 shadow-inner
                                      ${
                                        gameState.currentBid &&
                                        (d === gameState.currentBid.face ||
@@ -1284,7 +1287,7 @@ export default function GhostDiceGame() {
                   >
                     {React.createElement(DICE_ICONS[d], {
                       size: 32,
-                      className: "text-zinc-900",
+                      className: myTheme.color,
                     })}
                   </div>
                 ))}
@@ -1398,7 +1401,7 @@ export default function GhostDiceGame() {
                           onClick={() => setBidFace(face)}
                           className={`p-2 rounded-md transition-all ${
                             bidFace === face
-                              ? `bg-indigo-600 text-white shadow-lg`
+                              ? `${myTheme.bg} ${myTheme.color} shadow-lg`
                               : "hover:bg-zinc-700 text-zinc-500"
                           }`}
                         >
@@ -1408,6 +1411,13 @@ export default function GhostDiceGame() {
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
+                    <button
+                      onClick={challenge}
+                      disabled={!gameState.currentBid}
+                      className="bg-red-900/80 hover:bg-red-800 disabled:opacity-50 disabled:bg-zinc-800 text-red-200 py-4 rounded-xl font-bold text-lg shadow-lg border border-red-700 flex items-center justify-center gap-2"
+                    >
+                      <Gavel size={20} /> LIAR!
+                    </button>
                     <button
                       onClick={placeBid}
                       disabled={
@@ -1419,13 +1429,6 @@ export default function GhostDiceGame() {
                       className={`col-span-2 ${myTheme.bg} border ${myTheme.border} ${myTheme.text} hover:opacity-80 disabled:opacity-50 disabled:bg-zinc-800 disabled:border-zinc-700 disabled:text-zinc-500 py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2`}
                     >
                       <Megaphone size={20} /> Place Bid
-                    </button>
-                    <button
-                      onClick={challenge}
-                      disabled={!gameState.currentBid}
-                      className="bg-red-900/80 hover:bg-red-800 disabled:opacity-50 disabled:bg-zinc-800 text-red-200 py-4 rounded-xl font-bold text-lg shadow-lg border border-red-700 flex items-center justify-center gap-2"
-                    >
-                      <Gavel size={20} /> LIAR!
                     </button>
                   </div>
                 </div>
