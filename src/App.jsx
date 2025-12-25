@@ -893,7 +893,7 @@ export default function GhostDiceGame() {
           <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-indigo-300 to-zinc-500 font-serif tracking-widest drop-shadow-md">
             GHOST DICE
           </h1>
-          <p className="text-zinc-500 tracking-[0.3em] uppercase mt-2">
+          <p className="text-white-400/60 tracking-[0.3em] uppercase mt-2">
             Dead Men Tell No Tales
           </p>
         </div>
@@ -942,6 +942,20 @@ export default function GhostDiceGame() {
           >
             <BookOpen size={16} /> The Grimoire
           </button>
+        </div>
+        <div className="absolute bottom-4 text-slate-600 text-xs text-center">
+          Inspired by Liar's Dice. A tribute game.
+          <br />
+          Developed by <strong>RAWFID K SHUVO</strong>. Visit{" "}
+          <a
+            href="https://rawfidkshuvo.github.io/gamehub/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-500 underline hover:text-indigo-600"
+          >
+            GAMEHUB
+          </a>{" "}
+          for more games.
         </div>
       </div>
     );
