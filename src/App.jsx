@@ -151,6 +151,15 @@ const GhostLogo = () => (
   </div>
 );
 
+const GhostLogoBig = () => (
+  <div className="flex items-center justify-center gap-1 opacity-40 mt-auto pb-2 pt-2 relative z-10">
+    <Dices size={22} className="text-indigo-400" />
+    <span className="text-[20px] font-black tracking-widest text-indigo-400 uppercase">
+      GHOST DICE
+    </span>
+  </div>
+);
+
 const LeaveConfirmModal = ({
   onConfirmLeave,
   onConfirmLobby,
@@ -966,6 +975,7 @@ export default function GhostDiceGame() {
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-6 relative">
         <FloatingBackground />
+        <GhostLogoBig />
         {showLeaveConfirm && (
           <LeaveConfirmModal
             onConfirmLeave={leaveRoom}
@@ -1100,7 +1110,7 @@ export default function GhostDiceGame() {
               GHOST DICE
             </span>
             <span className="text-xs text-zinc-500 bg-black/50 px-2 py-1 rounded">
-              Room {gameState.roomId}
+              Graveyard
             </span>
           </div>
           <div className="flex gap-2">
