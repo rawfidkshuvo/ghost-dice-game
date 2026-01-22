@@ -54,7 +54,7 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: "game-hub-ff8aa.firebasestorage.app",
   messagingSenderId: "586559578902",
-  appId: "1:586559578902:web:590c84080a05dcfd6aa637"
+  appId: "1:586559578902:web:590c84080a05dcfd6aa637",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -309,35 +309,164 @@ const RulesModal = ({ onClose }) => (
   </div>
 );
 
-const FeedbackOverlay = ({ type, message, subtext, icon: Icon }) => (
-  <div className="fixed inset-0 z-[160] flex items-center justify-center pointer-events-none">
-    <div
-      className={`
-      flex flex-col items-center justify-center p-8 md:p-12 rounded-3xl border-4 shadow-[0_0_50px_rgba(0,0,0,0.8)] 
-      transform transition-all animate-in fade-in zoom-in slide-in-from-bottom-10 duration-300
-      backdrop-blur-md
-      ${
-        type === "success"
-          ? "bg-indigo-900/90 border-indigo-500 text-indigo-100"
-          : ""
-      }
-      ${type === "failure" ? "bg-red-900/90 border-red-500 text-red-100" : ""}
-      ${type === "neutral" ? "bg-zinc-800/90 border-zinc-500 text-white" : ""}
+const FeedbackOverlay = ({ data, currentUserId, onClose }) => {
+  if (!data) return null;
+
+  const isLoser = currentUserId === data.loserId;
+  const isWinner = currentUserId === data.winnerId;
+
+  // Determine styling based on result relative to the viewer
+  let bgClass = "bg-zinc-800/95 border-zinc-500 text-white"; // Spectator
+  let animClass = "animate-in fade-in zoom-in slide-in-from-bottom-10";
+  let btnClass = "bg-zinc-700 hover:bg-zinc-600 text-white border-zinc-500"; // Default button
+
+  if (isWinner) {
+    bgClass =
+      "bg-green-900/95 border-green-500 text-green-100 shadow-[0_0_100px_rgba(34,197,94,0.5)]";
+    btnClass = "bg-green-600 hover:bg-green-500 text-white border-green-400";
+  } else if (isLoser) {
+    bgClass =
+      "bg-red-900/95 border-red-500 text-red-100 shadow-[0_0_100px_rgba(239,68,68,0.5)]";
+    animClass += " animate-shake"; // Requires the CSS added in previous step
+    btnClass = "bg-red-800 hover:bg-red-700 text-white border-red-400";
+  }
+
+  const Icon = DICE_ICONS[data.bidFace] || Dices;
+
+  return (
+    <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      {/* Full screen tint for loser/winner */}
+      {isLoser && <div className="absolute inset-0 bg-red-500/10 z-0" />}
+      {isWinner && <div className="absolute inset-0 bg-green-500/10 z-0" />}
+
+      <div
+        className={`
+      relative z-10 flex flex-col items-center justify-center p-8 rounded-3xl border-4 
+      max-w-xl w-full text-center shadow-2xl duration-300
+      ${bgClass} ${animClass}
     `}
-    >
-      {Icon && (
-        <div className="mb-4 p-4 bg-black/30 rounded-full border-2 border-white/20">
-          <Icon size={64} className="animate-bounce" />
+      >
+        <div className="mb-6">
+          <h2 className="text-3xl font-black uppercase tracking-widest mb-2">
+            LIAR CALLED!
+          </h2>
+          <p className="text-lg opacity-80">
+            <span className="font-bold border-b border-white/30 pb-0.5">
+              {data.challengerName}
+            </span>{" "}
+            called out{" "}
+            <span className="font-bold border-b border-white/30 pb-0.5">
+              {data.bidderName}
+            </span>
+          </p>
         </div>
-      )}
-      <h2 className="text-3xl md:text-5xl font-black uppercase tracking-widest text-center drop-shadow-lg mb-2">
-        {message}
-      </h2>
-      {subtext && (
-        <p className="text-lg md:text-xl font-bold opacity-90 tracking-wide text-center">
-          {subtext}
-        </p>
-      )}
+
+        <div className="bg-black/30 p-6 rounded-xl w-full mb-8 border border-white/10">
+          <div className="flex items-center justify-center gap-8 mb-4">
+            <div className="text-center">
+              <div className="text-xs uppercase tracking-wider opacity-70 mb-1">
+                Bid
+              </div>
+              <div className="text-4xl font-black flex items-center gap-2 justify-center">
+                {data.bidQuantity} <span className="text-sm opacity-50">x</span>{" "}
+                <Icon size={32} />
+              </div>
+            </div>
+            <div className="h-12 w-px bg-white/20"></div>
+            <div className="text-center">
+              <div className="text-xs uppercase tracking-wider opacity-70 mb-1">
+                Found
+              </div>
+              <div
+                className={`text-4xl font-black ${
+                  data.actualCount >= data.bidQuantity
+                    ? "text-green-400"
+                    : "text-red-400"
+                }`}
+              >
+                {data.actualCount}
+              </div>
+            </div>
+          </div>
+          <p className="text-sm italic opacity-75">
+            {data.actualCount >= data.bidQuantity
+              ? "The bid was truthful!"
+              : "The bid was a lie!"}
+          </p>
+        </div>
+
+        <div className="text-2xl font-bold uppercase tracking-wide bg-black/40 px-6 py-3 rounded-full border border-white/20 mb-8">
+          {data.loserName} loses a die!
+        </div>
+
+        {/* --- CLOSE BUTTON --- */}
+        <button
+          onClick={onClose}
+          className={`
+            w-full py-4 rounded-xl font-bold text-lg uppercase tracking-widest border-2 shadow-lg
+            transition-all transform hover:scale-[1.02] active:scale-[0.98]
+            ${btnClass}
+          `}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Add this inside the GhostDiceGame component, before the return
+const styles = (
+  <style>{`
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    .animate-shake {
+      animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    }
+  `}</style>
+);
+
+const GameOverScreen = ({ winnerName, onReturnToLobby, isHost }) => (
+  <div className="fixed inset-0 z-[155] bg-black/95 flex flex-col items-center justify-center animate-in fade-in duration-500">
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/40 via-black to-black pointer-events-none" />
+
+    <div className="z-10 text-center space-y-8 p-8">
+      <div className="mb-4">
+        <Trophy
+          size={80}
+          className="text-yellow-400 mx-auto animate-bounce drop-shadow-[0_0_35px_rgba(250,204,21,0.6)]"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-2xl text-zinc-400 font-serif tracking-widest uppercase">
+          The Deadliest Ghost
+        </h2>
+        <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-2xl">
+          {winnerName}
+        </h1>
+      </div>
+
+      <div className="pt-12">
+        {isHost ? (
+          <button
+            onClick={onReturnToLobby}
+            className="group relative px-8 py-4 bg-zinc-100 text-black font-black text-xl rounded-full hover:bg-white hover:scale-105 transition-all shadow-[0_0_30px_rgba(255,255,255,0.3)]"
+          >
+            <span className="flex items-center gap-3">
+              <RotateCcw className="group-hover:-rotate-180 transition-transform duration-500" />
+              RETURN TO LOBBY
+            </span>
+          </button>
+        ) : (
+          <div className="text-zinc-500 animate-pulse font-mono">
+            Waiting for Host to reset...
+          </div>
+        )}
+      </div>
     </div>
   </div>
 );
@@ -402,12 +531,14 @@ export default function GhostDiceGame() {
           else setView("game");
 
           // Feedback Trigger
-          if (
-            data.feedbackTrigger &&
-            data.feedbackTrigger.id !== gameState?.feedbackTrigger?.id
-          ) {
-            setFeedback(data.feedbackTrigger);
-            setTimeout(() => setFeedback(null), 3000);
+          if (data.feedbackTrigger) {
+            // New trigger found
+            if (data.feedbackTrigger.id !== gameState?.feedbackTrigger?.id) {
+              setFeedback(data.feedbackTrigger);
+            }
+          } else {
+            // Triggers cleared on server (New Game/Reset) -> Clear local overlay
+            setFeedback(null);
           }
 
           // Auto update inputs to be valid next bid if not set
@@ -600,6 +731,10 @@ export default function GhostDiceGame() {
         turnIndex: startIdx,
         currentBid: null,
         turnState: "BIDDING",
+        feedbackTrigger: null, // <--- ADD THIS LINE (Wipes previous game data)
+        winner: null, // <--- ADD THIS LINE (Safety)
+        revealReadyIds: [], // <--- ADD THIS LINE (Safety)
+        roundLoserId: null, // <--- ADD THIS LINE (Safety)
         logs: [
           {
             id: Date.now().toString(),
@@ -665,38 +800,43 @@ export default function GhostDiceGame() {
       }
     });
 
-    const bidSuccess = count >= bid.quantity;
-    const loserId = bidSuccess ? challenger.id : bidder.id;
+    const bidSuccess = count >= bid.quantity; // Bidder told the truth (or underbid)
+    const loserId = bidSuccess ? challenger.id : bidder.id; // If bid true, challenger loses. If lie, bidder loses.
+    const winnerId = bidSuccess ? bidder.id : challenger.id;
     const loserName = bidSuccess ? challenger.name : bidder.name;
 
-    // Update logs and state for Reveal
+    // --- NEW FEEDBACK OBJECT STRUCTURE ---
+    const feedback = {
+      id: Date.now(),
+      type: "challenge_result", // We use this to trigger the specific overlay logic
+      challengerName: challenger.name,
+      bidderName: bidder.name,
+      bidQuantity: bid.quantity,
+      bidFace: bid.face,
+      actualCount: count,
+      loserId: loserId,
+      winnerId: winnerId,
+      loserName: loserName,
+    };
+
+    // Logs for the side panel
     let logs = [
       {
         id: Date.now().toString(),
-        text: `Liar! ${challenger.name} challenges ${bidder.name}.`,
+        text: `${challenger.name} called LIAR on ${bidder.name}!`,
         type: "warning",
       },
       {
         id: Date.now() + 1,
-        text: `Reveal: Found ${count} matching dice. Bid was ${
-          bidSuccess ? "VALID" : "FALSE"
-        }.`,
+        text: `Result: ${count} matching dice found (Bid: ${bid.quantity}).`,
         type: bidSuccess ? "success" : "danger",
       },
       {
         id: Date.now() + 2,
-        text: `${loserName} will lose a die!`,
+        text: `${loserName} loses a die.`,
         type: "danger",
       },
     ];
-
-    // Update Feedback
-    const feedback = {
-      id: Date.now(),
-      type: bidSuccess ? "failure" : "success",
-      message: bidSuccess ? "BID VALID" : "BID FAILED",
-      subtext: `${count} found vs ${bid.quantity} bid. Waiting for players to roll...`,
-    };
 
     await updateDoc(
       doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
@@ -705,7 +845,7 @@ export default function GhostDiceGame() {
         feedbackTrigger: feedback,
         logs: arrayUnion(...logs),
         roundLoserId: loserId,
-        revealReadyIds: [], // Reset for voting
+        revealReadyIds: [],
       }
     );
   };
@@ -713,7 +853,6 @@ export default function GhostDiceGame() {
   const confirmNextRound = async () => {
     if (!gameState || !user) return;
 
-    // Use transaction-like safety for voting logic
     const roomRef = doc(
       db,
       "artifacts",
@@ -735,12 +874,25 @@ export default function GhostDiceGame() {
 
         // Add user to ready list
         const newReadyIds = [...(data.revealReadyIds || []), user.uid];
-        const activePlayerCount = data.players.filter(
-          (p) => !p.eliminated
-        ).length;
 
-        // Check if everyone is ready
-        if (newReadyIds.length >= activePlayerCount) {
+        // --- UPDATED LOGIC START ---
+        // Calculate how many people actually need to click "Roll"
+        // We exclude players who are already eliminated OR are about to be eliminated
+        const loser = data.players.find((p) => p.id === data.roundLoserId);
+        const loserWillDie = loser && loser.diceCount <= 1;
+
+        const activeVoters = data.players.filter((p) => {
+          if (p.eliminated) return false; // Already dead
+          // If this is the loser and they are about to reach 0 dice, they don't vote
+          if (p.id === data.roundLoserId && loserWillDie) return false;
+          return true;
+        });
+
+        const requiredVotes = activeVoters.length;
+        // --- UPDATED LOGIC END ---
+
+        // Check if everyone needed has clicked
+        if (newReadyIds.length >= requiredVotes) {
           // RESOLVE ROUND
           const players = [...data.players];
           const lIdx = players.findIndex((p) => p.id === data.roundLoserId);
@@ -762,12 +914,7 @@ export default function GhostDiceGame() {
           if (alive.length === 1) {
             nextState = "FINISHED";
             winner = alive[0].name;
-            feedback = {
-              id: Date.now(),
-              type: "success",
-              message: "VICTORY",
-              subtext: `${winner} Survives!`,
-            };
+            feedback = null; // No feedback modal on game over
           } else {
             // Reroll everyone who is alive
             players.forEach((p) => {
@@ -803,7 +950,7 @@ export default function GhostDiceGame() {
           if (winner) {
             updates.status = "finished";
             updates.winner = winner;
-            updates.feedbackTrigger = feedback;
+            updates.feedbackTrigger = null; // Ensure clear
           }
 
           transaction.update(roomRef, updates);
@@ -1075,15 +1222,23 @@ export default function GhostDiceGame() {
 
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex flex-col relative overflow-hidden font-sans">
+        {styles} {/* <--- 1. INJECT STYLES HERE */}
         <FloatingBackground />
-
+        {/* 1. IMMEDIATE GAME OVER SCREEN */}
+        {gameState.status === "finished" && (
+          <GameOverScreen
+            winnerName={gameState.winner}
+            isHost={gameState.hostId === user.uid}
+            onReturnToLobby={returnToLobby}
+          />
+        )}
         {/* Overlays */}
-        {feedback && (
+        {/* 2. HIDE FEEDBACK OVERLAY IF GAME IS OVER */}
+        {feedback && gameState.status !== "finished" && (
           <FeedbackOverlay
-            type={feedback.type}
-            message={feedback.message}
-            subtext={feedback.subtext}
-            icon={feedback.type === "success" ? Gavel : Skull}
+            data={feedback}
+            currentUserId={user.uid}
+            onClose={() => setFeedback(null)}
           />
         )}
         {showRules && <RulesModal onClose={() => setShowRules(false)} />}
@@ -1102,9 +1257,8 @@ export default function GhostDiceGame() {
             inGame={true}
           />
         )}
-
         {/* Top Bar */}
-        <div className="h-14 bg-zinc-900/80 border-b border-zinc-800 flex items-center justify-between px-4 z-50 backdrop-blur-md sticky top-0">
+        <div className="h-14 bg-zinc-900/80 border-b border-zinc-800 flex items-center justify-between px-4 z-[160] backdrop-blur-md sticky top-0">
           <div className="flex items-center gap-2">
             <span className="font-serif text-indigo-500 font-bold tracking-wider hidden md:block">
               GHOST DICE
@@ -1138,7 +1292,6 @@ export default function GhostDiceGame() {
             </button>
           </div>
         </div>
-
         {/* Game Content */}
         <div className="flex-1 p-4 flex flex-col items-center relative z-10 max-w-6xl mx-auto w-full gap-4">
           {/* Table Center (Current Bid) */}
@@ -1264,26 +1417,43 @@ export default function GhostDiceGame() {
                 : ""
             }`}
           >
-            {/* Roll Button Overlay for Reveal Phase */}
-            {gameState.turnState === "REVEAL" && !me.eliminated && (
-              <div className="absolute -top-16 left-0 right-0 flex justify-center z-30">
-                {!gameState.revealReadyIds?.includes(user.uid) ? (
-                  <button
-                    onClick={confirmNextRound}
-                    className={`
-                      px-8 py-3 rounded-full font-black text-lg shadow-xl uppercase tracking-widest flex items-center gap-2 animate-bounce
-                      ${myTheme.bg} ${myTheme.text} ${myTheme.border} border-2
-                    `}
-                  >
-                    <Dices size={24} /> Roll Dice
-                  </button>
-                ) : (
-                  <div className="bg-zinc-900 px-6 py-2 rounded-full border border-green-500 text-green-500 font-bold flex items-center gap-2">
-                    <CheckCircle size={18} /> Ready
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Roll Button Logic */}
+            {(() => {
+              // 1. Am I the one who lost the round?
+              const amILoser = gameState.roundLoserId === user.uid;
+              // 2. Do I have only 1 (or 0) dice left?
+              const amIDying = amILoser && me.diceCount <= 1;
+
+              // 3. Should I see the button?
+              // (Must be Reveal phase, I must not be already dead, I must not be dying now, Game not finished)
+              const showButton =
+                gameState.turnState === "REVEAL" &&
+                !me.eliminated &&
+                !amIDying &&
+                gameState.status !== "finished";
+
+              if (!showButton) return null;
+
+              return (
+                <div className="absolute -top-16 left-0 right-0 flex justify-center z-30">
+                  {!gameState.revealReadyIds?.includes(user.uid) ? (
+                    <button
+                      onClick={confirmNextRound}
+                      className={`
+                        px-8 py-3 rounded-full font-black text-lg shadow-xl uppercase tracking-widest flex items-center gap-2 animate-bounce
+                        ${myTheme.bg} ${myTheme.text} ${myTheme.border} border-2
+                      `}
+                    >
+                      <Dices size={24} /> Roll Dice
+                    </button>
+                  ) : (
+                    <div className="bg-zinc-900 px-6 py-2 rounded-full border border-green-500 text-green-500 font-bold flex items-center gap-2">
+                      <CheckCircle size={18} /> Ready
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
