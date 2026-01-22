@@ -475,7 +475,9 @@ const GameOverScreen = ({ winnerName, onReturnToLobby, isHost }) => (
 export default function GhostDiceGame() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState("menu");
-  const [playerName, setPlayerName] = useState("");
+  const [playerName, setPlayerName] = useState(
+    () => localStorage.getItem("ghostdice_playerName") || ""
+  );
   // PERSISTENCE: Init state from localStorage
   const [roomId, setRoomId] = useState(
     () => localStorage.getItem(LS_ROOM_KEY) || ""
@@ -510,6 +512,10 @@ export default function GhostDiceGame() {
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (playerName) localStorage.setItem("ghostdice_playerName", playerName);
+  }, [playerName]);
 
   useEffect(() => {
     if (!roomId || !user) return;
