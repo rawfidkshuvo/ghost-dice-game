@@ -475,9 +475,7 @@ const GameOverScreen = ({ winnerName, onReturnToLobby, isHost }) => (
 export default function GhostDiceGame() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState("menu");
-  const [playerName, setPlayerName] = useState(
-    () => localStorage.getItem("ghostdice_playerName") || ""
-  );
+  
   // PERSISTENCE: Init state from localStorage
   const [roomId, setRoomId] = useState(
     () => localStorage.getItem(LS_ROOM_KEY) || ""
@@ -499,6 +497,15 @@ export default function GhostDiceGame() {
   const [bidQuantity, setBidQuantity] = useState(1);
   const [bidFace, setBidFace] = useState(2);
 
+  //read and fill global name
+  const [playerName, setPlayerName] = useState(
+    () => localStorage.getItem("gameHub_playerName") || ""
+  );
+  //set global name for all game
+  useEffect(() => {
+    if (playerName) localStorage.setItem("gameHub_playerName", playerName);
+  }, [playerName]);
+
   // --- Auth & Listener ---
   useEffect(() => {
     const initAuth = async () => {
@@ -513,9 +520,7 @@ export default function GhostDiceGame() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (playerName) localStorage.setItem("ghostdice_playerName", playerName);
-  }, [playerName]);
+  
 
   useEffect(() => {
     if (!roomId || !user) return;
