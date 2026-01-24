@@ -135,7 +135,7 @@ const FloatingBackground = ({ isShaking }) => (
     }`}
   >
     {/* Background Gradient */}
-    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/40 via-gray-950 to-black" />
+    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-slate-900/40 via-gray-950 to-black" />
     
     <div className="absolute top-0 left-0 w-full h-full opacity-10">
       {[...Array(20)].map((_, i) => {
@@ -150,7 +150,7 @@ const FloatingBackground = ({ isShaking }) => (
         return (
           <div
             key={i}
-            className="absolute animate-float text-white/20"
+            className="absolute animate-float text-white/60"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -205,7 +205,7 @@ const LeaveConfirmModal = ({
   isHost,
   inGame,
 }) => (
-  <div className="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4 animate-in fade-in">
+  <div className="fixed inset-0 bg-black/90 z-200 flex items-center justify-center p-4 animate-in fade-in">
     <div className="bg-zinc-900 rounded-xl border border-zinc-700 p-6 max-w-sm w-full text-center shadow-2xl">
       <h3 className="text-xl font-bold text-white mb-2">Abandon the Haunt?</h3>
       <p className="text-zinc-400 mb-6 text-sm">
@@ -240,7 +240,7 @@ const LeaveConfirmModal = ({
 );
 
 const LogViewer = ({ logs, onClose }) => (
-  <div className="fixed top-16 right-4 w-64 max-h-60 bg-gray-900/95 border border-gray-700 rounded-xl z-[155] overflow-y-auto p-2 shadow-2xl">
+  <div className="fixed top-16 right-4 w-64 max-h-60 bg-gray-900/95 border border-gray-700 rounded-xl z-155 overflow-y-auto p-2 shadow-2xl">
     <div className="bg-zinc-900 w-full md:max-w-md h-full md:h-[70vh] rounded-none md:rounded-xl flex flex-col border-none md:border border-zinc-700 shadow-2xl">
       <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950">
         <h3 className="text-white font-bold text-lg flex items-center gap-2">
@@ -285,7 +285,7 @@ const LogViewer = ({ logs, onClose }) => (
 );
 
 const RulesModal = ({ onClose }) => (
-  <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-0 md:p-4 animate-in fade-in">
+  <div className="fixed inset-0 bg-black/95 z-100 flex items-center justify-center p-0 md:p-4 animate-in fade-in">
     <div className="bg-zinc-900 md:rounded-2xl w-full max-w-4xl h-full md:h-auto md:max-h-[90vh] overflow-hidden border-none md:border border-indigo-500/30 flex flex-col">
       <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2 tracking-wider">
@@ -372,7 +372,7 @@ const FeedbackOverlay = ({ data, currentUserId, onClose }) => {
   const Icon = DICE_ICONS[data.bidFace] || Dices;
 
   return (
-    <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-160 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       {/* Full screen tint for loser/winner */}
       {isLoser && <div className="absolute inset-0 bg-red-500/10 z-0" />}
       {isWinner && <div className="absolute inset-0 bg-green-500/10 z-0" />}
@@ -468,8 +468,8 @@ const styles = (
 );
 
 const GameOverScreen = ({ winnerName, onReturnToLobby, isHost }) => (
-  <div className="fixed inset-0 z-[155] bg-black/95 flex flex-col items-center justify-center animate-in fade-in duration-500">
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/40 via-black to-black pointer-events-none" />
+  <div className="fixed inset-0 z-155 bg-black/95 flex flex-col items-center justify-center animate-in fade-in duration-500">
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-indigo-900/40 via-black to-black pointer-events-none" />
 
     <div className="z-10 text-center space-y-8 p-8">
       <div className="mb-4">
@@ -483,7 +483,7 @@ const GameOverScreen = ({ winnerName, onReturnToLobby, isHost }) => (
         <h2 className="text-2xl text-zinc-400 font-serif tracking-widest uppercase">
           The Deadliest Ghost
         </h2>
-        <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-2xl">
+        <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-linear-to-b from-yellow-300 to-yellow-600 drop-shadow-2xl">
           {winnerName}
         </h1>
       </div>
@@ -1095,7 +1095,7 @@ export default function GhostDiceGame() {
             size={64}
             className="text-indigo-400 mx-auto mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(129,140,248,0.5)]"
           />
-          <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-indigo-300 to-zinc-500 font-serif tracking-widest drop-shadow-md">
+          <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-linear-to-b from-indigo-300 to-zinc-500 font-serif tracking-widest drop-shadow-md">
             GHOST DICE
           </h1>
           <p className="text-white-400/60 tracking-[0.3em] uppercase mt-2">
@@ -1120,7 +1120,7 @@ export default function GhostDiceGame() {
           <button
             onClick={createRoom}
             disabled={loading}
-            className="w-full bg-gradient-to-r from-indigo-700 to-zinc-600 hover:from-indigo-600 hover:to-zinc-500 p-4 rounded font-bold mb-4 flex items-center justify-center gap-2 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-all"
+            className="w-full bg-linear-to-r from-indigo-700 to-zinc-600 hover:from-indigo-600 hover:to-zinc-500 p-4 rounded font-bold mb-4 flex items-center justify-center gap-2 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-all"
           >
             <Crown size={20} /> Host Séance
           </button>
@@ -1307,7 +1307,7 @@ export default function GhostDiceGame() {
           />
         )}
         {/* Top Bar */}
-        <div className="h-14 bg-zinc-900/80 border-b border-zinc-800 flex items-center justify-between px-4 z-[160] backdrop-blur-md sticky top-0">
+        <div className="h-14 bg-zinc-900/80 border-b border-zinc-800 flex items-center justify-between px-4 z-160 backdrop-blur-md sticky top-0">
           <div className="flex items-center gap-2">
             <span className="font-serif text-indigo-500 font-bold tracking-wider hidden md:block">
               GHOST DICE
