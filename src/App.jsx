@@ -130,15 +130,36 @@ const PLAYER_THEMES = [
 
 const FloatingBackground = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-zinc-950 to-black" />
-    <div className="absolute top-0 left-0 w-full h-full bg-indigo-900/10 mix-blend-overlay" />
-    <div
-      className="absolute inset-0 opacity-10"
-      style={{
-        backgroundImage:
-          'url("https://www.transparenttextures.com/patterns/black-scales.png")',
-      }}
-    ></div>
+    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-green-900/40 via-gray-950 to-black" />
+    <div className="absolute top-0 left-0 w-full h-full opacity-10">
+      {[...Array(15)].map((_, i) => (
+        <div
+          key={i}
+          className="absolute animate-float text-green-500/20"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animationDuration: `${15 + Math.random() * 20}s`,
+            transform: `scale(${0.5 + Math.random()})`,
+          }}
+        >
+          <Dices size={32} />
+          <Dice1 size={32} />
+          <Dice2 size={32} />
+          <Dice3 size={32} />
+          <Dice4 size={32} />
+          <Dice5 size={32} />
+          <Dice6 size={32} />
+        </div>
+      ))}
+    </div>
+    <style>{`
+      @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(45deg); }
+      }
+      .animate-float { animation: float infinite ease-in-out; }
+    `}</style>
   </div>
 );
 
