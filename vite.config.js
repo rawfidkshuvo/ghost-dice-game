@@ -4,5 +4,5 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(),tailwindcss(),],
-  base: '/fruit-seller-game/', // MUST match your repo name
+  base: '/ghost-dice-game/', // MUST match your repo name
 })
