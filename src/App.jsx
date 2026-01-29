@@ -619,7 +619,11 @@ export default function GhostDiceGame() {
   const createRoom = async () => {
     if (!playerName.trim()) return setError("Name required.");
     setLoading(true);
-    const newId = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const chars = "123456789ABCDEFGHIJKLMNPQRSTUVWXYZ";
+    let newId = "";
+    for (let i = 0; i < 6; i++) {
+      newId += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
 
     const initialData = {
       roomId: newId,
@@ -1218,7 +1222,7 @@ export default function GhostDiceGame() {
 
               {/* Flex container to align ID and Button side-by-side */}
               <div className="flex items-center gap-3 mt-1">
-                <div className="text-2xl md:text-3xl font-mono text-white font-black">
+                <div className="text-2xl md:text-3xl font-mono text-white">
                   {roomId}
                 </div>
 
