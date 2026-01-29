@@ -45,6 +45,7 @@ import {
   Sparkles,
   Trash2,
   Loader,
+  Copy,
 } from "lucide-react";
 
 // --- Firebase Config ---
@@ -54,7 +55,7 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
@@ -136,15 +137,15 @@ const FloatingBackground = ({ isShaking }) => (
   >
     {/* Background Gradient */}
     <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-slate-900/40 via-gray-950 to-black" />
-    
+
     <div className="absolute top-0 left-0 w-full h-full opacity-10">
       {[...Array(20)].map((_, i) => {
         // --- CHANGE START ---
         const diceKeys = Object.keys(DICE_ICONS);
         // We cycle through keys 1-6 based on the index
-        const key = diceKeys[i % diceKeys.length]; 
+        const key = diceKeys[i % diceKeys.length];
         // Direct assignment because DICE_ICONS values are the components themselves
-        const Icon = DICE_ICONS[key]; 
+        const Icon = DICE_ICONS[key];
         // --- CHANGE END ---
 
         return (
@@ -261,10 +262,10 @@ const LogViewer = ({ logs, onClose }) => (
               log.type === "danger"
                 ? "bg-red-900/10 border-red-500 text-red-300"
                 : log.type === "success"
-                ? "bg-green-900/10 border-green-500 text-green-300"
-                : log.type === "warning"
-                ? "bg-indigo-900/10 border-indigo-500 text-indigo-300"
-                : "bg-zinc-800/50 border-zinc-600 text-zinc-400"
+                  ? "bg-green-900/10 border-green-500 text-green-300"
+                  : log.type === "warning"
+                    ? "bg-indigo-900/10 border-indigo-500 text-indigo-300"
+                    : "bg-zinc-800/50 border-zinc-600 text-zinc-400"
             }`}
           >
             <span className="opacity-50 mr-2 font-mono">
@@ -513,10 +514,10 @@ const GameOverScreen = ({ winnerName, onReturnToLobby, isHost }) => (
 export default function GhostDiceGame() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState("menu");
-  
+
   // PERSISTENCE: Init state from localStorage
   const [roomId, setRoomId] = useState(
-    () => localStorage.getItem(LS_ROOM_KEY) || ""
+    () => localStorage.getItem(LS_ROOM_KEY) || "",
   );
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [gameState, setGameState] = useState(null);
@@ -537,7 +538,7 @@ export default function GhostDiceGame() {
 
   //read and fill global name
   const [playerName, setPlayerName] = useState(
-    () => localStorage.getItem("gameHub_playerName") || ""
+    () => localStorage.getItem("gameHub_playerName") || "",
   );
   //set global name for all game
   useEffect(() => {
@@ -557,8 +558,6 @@ export default function GhostDiceGame() {
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
-
-  
 
   useEffect(() => {
     if (!roomId || !user) return;
@@ -601,7 +600,7 @@ export default function GhostDiceGame() {
           setView("menu");
           setError("Room vanished into the ether.");
         }
-      }
+      },
     );
     return () => unsub();
   }, [roomId, user, gameState?.feedbackTrigger?.id]);
@@ -649,7 +648,7 @@ export default function GhostDiceGame() {
     try {
       await setDoc(
         doc(db, "artifacts", APP_ID, "public", "data", "rooms", newId),
-        initialData
+        initialData,
       );
       setRoomId(newId);
       localStorage.setItem(LS_ROOM_KEY, newId); // Save Session
@@ -672,7 +671,7 @@ export default function GhostDiceGame() {
         "public",
         "data",
         "rooms",
-        roomCodeInput
+        roomCodeInput,
       );
       const snap = await getDoc(ref);
       if (!snap.exists()) throw new Error("Room not found.");
@@ -728,12 +727,12 @@ export default function GhostDiceGame() {
     if (gameState.hostId !== user.uid) return;
 
     const newPlayers = gameState.players.filter(
-      (p) => p.id !== playerIdToRemove
+      (p) => p.id !== playerIdToRemove,
     );
 
     await updateDoc(
       doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
-      { players: newPlayers }
+      { players: newPlayers },
     );
   };
 
@@ -741,11 +740,11 @@ export default function GhostDiceGame() {
   const toggleReady = async () => {
     if (!gameState) return;
     const updatedPlayers = gameState.players.map((p) =>
-      p.id === user.uid ? { ...p, ready: !p.ready } : p
+      p.id === user.uid ? { ...p, ready: !p.ready } : p,
     );
     await updateDoc(
       doc(db, "artifacts", APP_ID, "public", "data", "rooms", roomId),
-      { players: updatedPlayers }
+      { players: updatedPlayers },
     );
   };
 
@@ -755,6 +754,21 @@ export default function GhostDiceGame() {
     const res = [];
     for (let i = 0; i < count; i++) res.push(Math.floor(Math.random() * 6) + 1);
     return res.sort();
+  };
+
+  const copyToClipboard = () => {
+    try {
+      navigator.clipboard.writeText(roomId);
+      triggerFeedback("neutral", "COPIED!", "", CheckCircle);
+    } catch (e) {
+      const el = document.createElement("textarea");
+      el.value = roomId;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      triggerFeedback("neutral", "COPIED!", "", CheckCircle);
+    }
   };
 
   const startGame = async () => {
@@ -791,7 +805,7 @@ export default function GhostDiceGame() {
             type: "neutral",
           },
         ],
-      }
+      },
     );
   };
 
@@ -825,7 +839,7 @@ export default function GhostDiceGame() {
           text: `${me.name} bids: ${bidQuantity}x ${bidFace}s`,
           type: "neutral",
         }),
-      }
+      },
     );
   };
 
@@ -895,7 +909,7 @@ export default function GhostDiceGame() {
         logs: arrayUnion(...logs),
         roundLoserId: loserId,
         revealReadyIds: [],
-      }
+      },
     );
   };
 
@@ -909,7 +923,7 @@ export default function GhostDiceGame() {
       "public",
       "data",
       "rooms",
-      roomId
+      roomId,
     );
 
     try {
@@ -1035,7 +1049,7 @@ export default function GhostDiceGame() {
         feedbackTrigger: null,
         revealReadyIds: [],
         roundLoserId: null,
-      }
+      },
     );
   };
 
@@ -1183,9 +1197,19 @@ export default function GhostDiceGame() {
 
         <div className="z-10 w-full max-w-lg bg-zinc-900/90 backdrop-blur p-8 rounded-2xl border border-indigo-900/50 shadow-2xl mb-4">
           <div className="flex justify-between items-center mb-8 border-b border-zinc-700 pb-4">
-            <h2 className="text-2xl font-serif text-indigo-400">
-              Crypt: <span className="text-white font-mono">{roomId}</span>
-            </h2>
+            {/* Grouping Title and Copy Button together on the left */}
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-serif text-indigo-400">
+                Crypt: <span className="text-white font-mono">{roomId}</span>
+              </h2>
+              <button
+                onClick={copyToClipboard}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white"
+                title="Copy Room ID"
+              >
+                <Copy size={16} />
+              </button>
+            </div>
             <button
               onClick={() => setShowLeaveConfirm(true)}
               className="p-2 bg-red-900/30 hover:bg-red-900/50 rounded text-red-300"
@@ -1447,7 +1471,7 @@ export default function GhostDiceGame() {
                             d === gameState.currentBid?.face || d === 1
                               ? "text-white"
                               : "text-zinc-700",
-                        })
+                        }),
                       )}
                     </div>
                   )}
