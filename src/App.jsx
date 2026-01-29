@@ -1213,7 +1213,7 @@ export default function GhostDiceGame() {
             {/* Grouping Title and Copy Button together on the left */}
             <div>
               <h2 className="text-lg md:text-xl text-indigo-400 font-bold uppercase">
-                Throne Room
+                Crypt
               </h2>
 
               {/* Flex container to align ID and Button side-by-side */}
