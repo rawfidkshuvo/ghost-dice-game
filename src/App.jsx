@@ -1095,7 +1095,7 @@ export default function GhostDiceGame() {
   if (!user)
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-indigo-500 animate-pulse">
-        Summoning...
+        Summoning souls...
       </div>
     );
 
@@ -1108,7 +1108,7 @@ export default function GhostDiceGame() {
           <Loader size={48} className="text-indigo-500 animate-spin" />
           <div className="text-center">
             <h2 className="text-xl font-bold">Reconnecting...</h2>
-            <p className="text-zinc-400 text-sm">Resuming the Séance</p>
+            <p className="text-zinc-400 text-sm">Resuming your session</p>
           </div>
         </div>
       </div>
