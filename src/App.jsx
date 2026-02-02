@@ -1076,6 +1076,7 @@ export default function GhostDiceGame() {
   if (isMaintenance) {
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white p-4 text-center">
+        <GhostLogoBig />
         <div className="bg-orange-500/10 p-8 rounded-2xl border border-orange-500/30">
           <Hammer
             size={64}
@@ -1086,6 +1087,18 @@ export default function GhostDiceGame() {
             The spirits are resting. The tavern is closed until dusk.
           </p>
         </div>
+        <div className="h-8"></div>
+        <a href="https://rawfidkshuvo.github.io/gamehub/">
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <div className="text-center pb-12 animate-pulse">
+              <div className="inline-flex items-center gap-3 px-8 py-4 bg-slate-900/50 rounded-full border border-indigo-500/20 text-indigo-300 font-bold tracking-widest text-sm uppercase backdrop-blur-sm">
+                <Sparkles size={16} /> Visit Gamehub...Try our other releases...{" "}
+                <Sparkles size={16} />
+              </div>
+            </div>
+          </div>
+        </a>
+        <GhostLogo />
       </div>
     );
   }
